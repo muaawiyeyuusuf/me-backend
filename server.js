@@ -126,12 +126,12 @@ app.post("/login", (req, res) => {
   res.redirect("/")
 })
 
-app.get("/profile", mustBeloggedIn, (req, res) => {
+app.get("/profile", mustBeLoggedIn, (req, res) => {
   const profile = db.prepare("SELECT * FROM profiles WHERE userId = ?").get(req.user.userid)
   res.render("profile", { profile })
 })
 
-app.post("/profile", mustBeloggedIn, (req, res) => {
+app.post("/profile", mustBeLoggedIn, (req, res) => {
   const { fullName, bio } = req.body
   const existing = db.prepare("SELECT * FROM profiles WHERE userId = ?").get(req.user.userid)
 
