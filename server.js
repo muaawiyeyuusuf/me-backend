@@ -13,7 +13,7 @@ const app = express()
 
 // 👉 CORS si loo oggolaado frontend-kaaga localhost
 app.use(cors({
-  origin: "http://127.0.0.1:5500/login.html", // frontend URL
+  origin: "http://127.0.0.1:5500", // frontend URL
   credentials: true
 }))
 
@@ -42,6 +42,16 @@ const createTables = db.transaction(() => {
       FOREIGN KEY (authorid) REFERENCES users(id)
     )
   `).run()
+  db.prepare(`
+  CREATE TABLE IF NOT EXISTS profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId INTEGER UNIQUE,
+    fullName TEXT,
+    bio TEXT,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  )
+`).run();
+
 })
 
 createTables()
@@ -115,6 +125,25 @@ app.post("/login", (req, res) => {
 
   res.redirect("/")
 })
+
+app.get("/profile", mustBeloggedIn, (req, res) => {
+  const profile = db.prepare("SELECT * FROM profiles WHERE userId = ?").get(req.user.userid)
+  res.render("profile", { profile })
+})
+
+app.post("/profile", mustBeloggedIn, (req, res) => {
+  const { fullName, bio } = req.body
+  const existing = db.prepare("SELECT * FROM profiles WHERE userId = ?").get(req.user.userid)
+
+  if (existing) {
+    db.prepare("UPDATE profiles SET fullName = ?, bio = ? WHERE userId = ?").run(fullName, bio, req.user.userid)
+  } else {
+    db.prepare("INSERT INTO profiles (userId, fullName, bio) VALUES (?, ?, ?)").run(req.user.userid, fullName, bio)
+  }
+
+  res.redirect("/profile")
+})
+
 
 function mustBeLoggedIn(req, res, next) {
   if (req.user) return next()
@@ -224,4 +253,4 @@ app.post("/register", (req, res) => {
   res.redirect("/")
 })
 
-app.listen(3000)
+app.listen(4000)
