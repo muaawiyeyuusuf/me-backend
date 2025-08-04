@@ -127,21 +127,36 @@ app.post("/login", (req, res) => {
 })
 
 app.get("/profile", mustBeLoggedIn, (req, res) => {
-  const profile = db.prepare("SELECT * FROM profiles WHERE userId = ?").get(req.user.userid)
-  res.render("profile", { profile })
+  try {
+    const profile = db.prepare("SELECT * FROM profiles WHERE userId = ?").get(req.user.userid)
+    res.render("profile", { profile })
+  } catch (err) {
+    console.error(" Error on GET /profile:", err.message)
+    res.status(500).send("Error loading profile: " + err.message)
+  }
 })
 
 app.post("/profile", mustBeLoggedIn, (req, res) => {
-  const { fullName, bio } = req.body
-  const existing = db.prepare("SELECT * FROM profiles WHERE userId = ?").get(req.user.userid)
+  try {
+    const { fullName = "", bio = "" } = req.body
+    console.log(" Received profile update:", fullName, bio)
+    console.log(" User ID:", req.user?.userid)
 
-  if (existing) {
-    db.prepare("UPDATE profiles SET fullName = ?, bio = ? WHERE userId = ?").run(fullName, bio, req.user.userid)
-  } else {
-    db.prepare("INSERT INTO profiles (userId, fullName, bio) VALUES (?, ?, ?)").run(req.user.userid, fullName, bio)
+    const existing = db.prepare("SELECT * FROM profiles WHERE userId = ?").get(req.user.userid)
+
+    if (existing) {
+      db.prepare("UPDATE profiles SET fullName = ?, bio = ? WHERE userId = ?")
+        .run(fullName, bio, req.user.userid)
+    } else {
+      db.prepare("INSERT INTO profiles (userId, fullName, bio) VALUES (?, ?, ?)")
+        .run(req.user.userid, fullName, bio)
+    }
+
+    res.redirect("/profile")
+  } catch (err) {
+    console.error("Error on POST / profile:", err.message)
+    res.status(500).send("Error saving profile: " + err.message)
   }
-
-  res.redirect("/profile")
 })
 
 
